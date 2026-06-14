@@ -1,0 +1,1565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>The Bodhi Café · Premium Menu</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=Jost:wght@200;300;400;500;600&display=swap" rel="stylesheet">
+<style>
+  /* ════════════════════════════════════════
+     DESIGN TOKENS
+  ════════════════════════════════════════ */
+  :root {
+    --bg:         #0e0d0b;
+    --surface:    #161511;
+    --surface2:   #1c1a16;
+    --surface3:   #222018;
+    --gold:       #c9a96e;
+    --gold-light: #e2c898;
+    --gold-dim:   rgba(201,169,110,0.15);
+    --cream:      #f0e8d8;
+    --muted:      #6b6457;
+    --text:       #d4c9b5;
+    --white:      #f7f2ea;
+    --green:      #4caf50;
+    --red:        #e57373;
+    --blue:       #64b5f6;
+    --wa-green:   #25D366;
+  }
+
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Jost', sans-serif;
+    font-weight: 300;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Noise texture overlay */
+  body::before {
+    content:'';
+    position:fixed; inset:0;
+    background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events:none; z-index:1000; opacity:0.6;
+  }
+
+  /* ════════════════════════════════════════
+     APP SHELL
+  ════════════════════════════════════════ */
+  #app { display:flex; flex-direction:column; min-height:100vh; }
+
+  /* ── TOP APP BAR ── */
+  .app-bar {
+    position:sticky; top:0; z-index:200;
+    background:rgba(14,13,11,0.96);
+    backdrop-filter:blur(24px);
+    border-bottom:1px solid rgba(201,169,110,0.12);
+    display:flex; align-items:center; justify-content:space-between;
+    padding:0 1rem;
+    height:54px;
+  }
+  .app-bar-brand {
+    font-family:'Cormorant Garamond', serif;
+    font-size:1.1rem; color:var(--gold); letter-spacing:0.08em;
+  }
+  .app-bar-actions { display:flex; gap:0.5rem; align-items:center; }
+
+  /* Staff mode badge in top bar */
+  .staff-badge {
+    display:none;
+    font-size:0.48rem; letter-spacing:0.18em; text-transform:uppercase;
+    color:var(--bg); background:var(--gold);
+    padding:3px 8px; border-radius:2px; font-family:'Jost',sans-serif;
+    font-weight:600;
+  }
+  .staff-badge.show { display:inline-block; }
+
+  .icon-btn {
+    width:36px; height:36px; border-radius:50%;
+    border:none; background:transparent; color:var(--muted);
+    cursor:pointer; display:flex; align-items:center; justify-content:center;
+    transition:color .2s, background .2s; font-size:1.1rem;
+  }
+  .icon-btn:hover { color:var(--gold); background:var(--gold-dim); }
+  .icon-btn.active { color:var(--gold); }
+
+  /* ── BOTTOM NAV ── */
+  .bottom-nav {
+    position:fixed; bottom:0; left:0; right:0; z-index:300;
+    background:rgba(14,13,11,0.97);
+    backdrop-filter:blur(24px);
+    border-top:1px solid rgba(201,169,110,0.1);
+    display:flex; height:60px;
+    padding-bottom:env(safe-area-inset-bottom);
+  }
+  .bnav-item {
+    flex:1; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; gap:3px;
+    border:none; background:transparent; cursor:pointer;
+    color:var(--muted); font-size:0.5rem; letter-spacing:0.12em;
+    text-transform:uppercase; font-family:'Jost',sans-serif;
+    transition:color .2s; position:relative;
+  }
+  .bnav-item svg { width:20px; height:20px; stroke:currentColor; fill:none; stroke-width:1.5; stroke-linecap:round; stroke-linejoin:round; }
+  .bnav-item.active { color:var(--gold); }
+  /* Staff-only nav items hidden by default */
+  .bnav-item.staff-only { display:none; }
+  .bnav-item.staff-only.show { display:flex; }
+  .bnav-badge {
+    position:absolute; top:6px; right:calc(50% - 18px);
+    width:16px; height:16px; border-radius:50%;
+    background:var(--gold); color:var(--bg);
+    font-size:0.55rem; font-weight:600; display:none;
+    align-items:center; justify-content:center;
+  }
+  .bnav-badge.show { display:flex; }
+
+  /* ── SCREENS ── */
+  .screen { display:none; flex:1; padding-bottom:70px; }
+  .screen.active { display:block; }
+
+  /* ════════════════════════════════════════
+     CUSTOMER LANDING HERO
+     (shown only in customer mode on first load)
+  ════════════════════════════════════════ */
+  .customer-landing {
+    display:none;
+    min-height: calc(100svh - 54px - 60px);
+    flex-direction:column;
+    align-items:center; justify-content:center;
+    text-align:center; padding:2rem;
+    position:relative; overflow:hidden;
+  }
+  .customer-landing.show { display:flex; }
+  .landing-bg {
+    position:absolute; inset:0;
+    background:radial-gradient(ellipse 90% 70% at 50% 40%, #2a2218 0%, #0e0d0b 70%);
+  }
+  .landing-ring {
+    position:absolute; border-radius:50%;
+    border:1px solid rgba(201,169,110,0.07);
+    animation:breathe 7s ease-in-out infinite;
+  }
+  .lr1 { width:260px;height:260px; }
+  .lr2 { width:420px;height:420px;animation-delay:1.5s;opacity:0.5; }
+  .lr3 { width:600px;height:600px;animation-delay:3s;opacity:0.25; }
+  .lr4 { width:800px;height:800px;animation-delay:4.5s;opacity:0.12; }
+  @keyframes breathe { 0%,100%{transform:scale(1);}50%{transform:scale(1.04);} }
+
+  .landing-content { position:relative; z-index:2; }
+  .landing-eyebrow {
+    font-size:0.58rem; letter-spacing:0.32em; text-transform:uppercase;
+    color:var(--gold); margin-bottom:1rem;
+    animation: fadeUp 0.8s ease both;
+  }
+  .landing-title {
+    font-family:'Cormorant Garamond',serif;
+    font-size:clamp(3rem,14vw,5.5rem);
+    font-weight:300; color:var(--white); line-height:0.95;
+    margin-bottom:1.2rem;
+    animation: fadeUp 0.8s 0.1s ease both;
+  }
+  .landing-title em { font-style:italic; color:var(--gold-light); }
+  .landing-subtitle {
+    font-size:0.68rem; color:var(--muted);
+    letter-spacing:0.18em; text-transform:uppercase;
+    line-height:2; margin-bottom:2.5rem;
+    animation: fadeUp 0.8s 0.2s ease both;
+  }
+  .landing-cta {
+    display:inline-flex; align-items:center; gap:0.75rem;
+    background:var(--gold); color:var(--bg);
+    border:none; border-radius:2px;
+    padding:0.9rem 2rem; cursor:pointer;
+    font-family:'Jost',sans-serif; font-size:0.62rem;
+    letter-spacing:0.22em; text-transform:uppercase; font-weight:500;
+    transition:background .2s, transform .15s;
+    animation: fadeUp 0.8s 0.3s ease both;
+  }
+  .landing-cta:hover { background:var(--gold-light); }
+  .landing-cta:active { transform:scale(0.97); }
+  .landing-cta svg { width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2; }
+  .landing-staff-link {
+    margin-top:2rem;
+    font-size:0.58rem; color:var(--muted);
+    letter-spacing:0.12em; cursor:pointer;
+    transition:color .2s;
+    animation: fadeUp 0.8s 0.4s ease both;
+    background:none; border:none;
+    text-decoration:underline; text-underline-offset:3px;
+  }
+  .landing-staff-link:hover { color:var(--gold); }
+  @keyframes fadeUp { from{opacity:0;transform:translateY(16px);}to{opacity:1;transform:translateY(0);} }
+
+  /* ════════════════════════════════════════
+     MENU SCREEN
+  ════════════════════════════════════════ */
+  .hero {
+    position:relative; height:36svh;
+    display:flex; flex-direction:column;
+    align-items:center; justify-content:center;
+    text-align:center; padding:2rem; overflow:hidden;
+  }
+  .hero-bg { position:absolute; inset:0; background:radial-gradient(ellipse 80% 60% at 50% 40%, #2a2218 0%, #0e0d0b 70%); }
+  .hero-ring { position:absolute; border-radius:50%; border:1px solid rgba(201,169,110,0.08); animation:breathe 6s ease-in-out infinite; }
+  .ring-1{width:200px;height:200px;}
+  .ring-2{width:320px;height:320px;animation-delay:1s;opacity:0.6;}
+  .ring-3{width:440px;height:440px;animation-delay:2s;opacity:0.3;}
+  .hero-eyebrow{position:relative;z-index:2;font-size:0.6rem;letter-spacing:0.3em;text-transform:uppercase;color:var(--gold);margin-bottom:0.6rem;}
+  .hero-title{position:relative;z-index:2;font-family:'Cormorant Garamond',serif;font-size:clamp(2.5rem,10vw,4rem);font-weight:300;color:var(--white);line-height:1;}
+  .hero-title em{font-style:italic;color:var(--gold-light);}
+  .hero-sub{position:relative;z-index:2;font-size:0.65rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin-top:0.8rem;}
+
+  /* Search bar */
+  .search-wrap{padding:0.75rem 1.25rem;position:sticky;top:54px;z-index:100;background:rgba(14,13,11,0.92);backdrop-filter:blur(20px);}
+  .search-input{
+    width:100%;background:var(--surface2);border:1px solid rgba(201,169,110,0.12);
+    border-radius:4px;padding:0.6rem 1rem 0.6rem 2.4rem;
+    color:var(--text);font-family:'Jost',sans-serif;font-size:0.78rem;font-weight:300;
+    outline:none;transition:border-color .2s;
+  }
+  .search-input:focus{border-color:rgba(201,169,110,0.4);}
+  .search-icon{position:absolute;left:2rem;top:50%;transform:translateY(-50%);color:var(--muted);font-size:0.85rem;pointer-events:none;}
+
+  /* Category tabs */
+  .cat-tabs{display:flex;overflow-x:auto;scrollbar-width:none;gap:0;padding:0 1rem;background:rgba(14,13,11,0.92);backdrop-filter:blur(20px);border-bottom:1px solid rgba(201,169,110,0.08);}
+  .cat-tabs::-webkit-scrollbar{display:none;}
+  .cat-tab{flex-shrink:0;padding:0.85rem 1.1rem;font-size:0.58rem;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted);cursor:pointer;border:none;background:none;border-bottom:1.5px solid transparent;transition:color .3s,border-color .3s;white-space:nowrap;font-family:'Jost',sans-serif;}
+  .cat-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+
+  /* Menu items */
+  .menu-container{max-width:520px;margin:0 auto;padding:0 1.25rem 2rem;}
+  .section{padding-top:3rem;}
+  .section-header{display:flex;align-items:center;gap:1rem;margin-bottom:1.5rem;}
+  .section-header::before,.section-header::after{content:'';flex:1;height:1px;background:linear-gradient(to right,transparent,rgba(201,169,110,0.2));}
+  .section-header::after{background:linear-gradient(to left,transparent,rgba(201,169,110,0.2));}
+  .section-title{font-family:'Cormorant Garamond',serif;font-size:1rem;font-weight:400;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);white-space:nowrap;}
+
+  .menu-item{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;padding:1rem 0;border-bottom:1px solid rgba(255,255,255,0.04);position:relative;transition:all .25s ease;}
+  .menu-item:last-child{border-bottom:none;}
+  .item-info{flex:1;}
+  .item-name{font-family:'Cormorant Garamond',serif;font-size:1rem;font-weight:400;color:var(--white);margin-bottom:0.2rem;line-height:1.3;display:flex;align-items:center;flex-wrap:wrap;gap:4px;}
+  .item-desc{font-size:0.68rem;color:var(--muted);line-height:1.6;font-weight:300;letter-spacing:0.02em;}
+  .item-right{display:flex;flex-direction:column;align-items:flex-end;gap:0.4rem;flex-shrink:0;}
+  .item-price{font-family:'Cormorant Garamond',serif;font-size:1.05rem;color:var(--gold-light);font-weight:300;}
+  .price-unit{font-family:'Jost',sans-serif;font-size:0.62rem;color:var(--muted);}
+  .add-btn{width:28px;height:28px;border-radius:50%;border:1px solid rgba(201,169,110,0.4);background:transparent;color:var(--gold);font-size:1rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;flex-shrink:0;}
+  .add-btn:active{transform:scale(0.9);}
+  .counter{display:flex;align-items:center;gap:0.4rem;}
+  .counter-btn{width:24px;height:24px;border-radius:50%;border:1px solid rgba(201,169,110,0.4);background:transparent;color:var(--gold);font-size:0.9rem;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}
+  .counter-btn:active{transform:scale(0.85);}
+  .counter-num{font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--white);min-width:16px;text-align:center;}
+  .veg-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#4caf50;flex-shrink:0;}
+  .badge{display:inline-block;font-size:0.48rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--gold);border:1px solid rgba(201,169,110,0.3);padding:2px 5px;border-radius:2px;font-family:'Jost',sans-serif;}
+  .popular-badge{background:rgba(201,169,110,0.12);color:var(--gold);border:none;}
+  .category-note{font-size:0.6rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:0.8rem;}
+
+  /* Cart bar */
+  .cart-bar{position:fixed;bottom:60px;left:0;right:0;z-index:250;padding:0.75rem 1.5rem;background:linear-gradient(to top,var(--bg) 60%,transparent);display:none;}
+  .cart-bar.visible{display:block;}
+  .cart-btn{width:100%;max-width:520px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;padding:0.9rem 1.4rem;background:var(--gold);color:var(--bg);border:none;border-radius:2px;cursor:pointer;font-family:'Jost',sans-serif;font-size:0.68rem;letter-spacing:0.18em;text-transform:uppercase;font-weight:500;transition:background .2s;}
+  .cart-btn:active{background:var(--gold-light);}
+  .cart-count-pill{background:var(--bg);color:var(--gold);width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:0.68rem;font-weight:500;}
+
+  /* Order modal */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:400;display:none;backdrop-filter:blur(8px);}
+  .modal-overlay.open{display:block;}
+  .modal{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid rgba(201,169,110,0.15);border-radius:16px 16px 0 0;padding:1.5rem 1.5rem 3rem;z-index:401;transform:translateY(100%);transition:transform .4s cubic-bezier(0.16,1,0.3,1);max-height:80svh;overflow-y:auto;}
+  .modal.open{transform:translateY(0);}
+  .modal-handle{width:36px;height:3px;background:rgba(255,255,255,0.15);border-radius:2px;margin:0 auto 1.5rem;}
+  .modal-title{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-weight:300;color:var(--white);margin-bottom:0.3rem;}
+  .modal-sub{font-size:0.62rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:1.5rem;}
+  .order-item{display:flex;justify-content:space-between;align-items:center;padding:0.7rem 0;border-bottom:1px solid rgba(255,255,255,0.05);}
+  .order-item-name{font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--text);}
+  .order-item-detail{font-size:0.68rem;color:var(--muted);margin-top:2px;}
+  .order-item-price{font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--gold-light);}
+  .order-total{display:flex;justify-content:space-between;padding-top:1.2rem;margin-top:0.5rem;border-top:1px solid rgba(201,169,110,0.1);}
+  .total-label{font-size:0.62rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);align-self:flex-end;}
+  .total-amount{font-family:'Cormorant Garamond',serif;font-size:1.8rem;color:var(--white);}
+  .table-input-row{display:flex;align-items:center;gap:0.6rem;margin-top:1rem;}
+  .table-label{font-size:0.62rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);white-space:nowrap;}
+  .table-input{flex:1;background:var(--surface2);border:1px solid rgba(201,169,110,0.2);border-radius:3px;padding:0.5rem 0.75rem;color:var(--text);font-family:'Jost',sans-serif;font-size:0.78rem;outline:none;transition:border-color .2s;}
+  .table-input:focus{border-color:rgba(201,169,110,0.4);}
+  .place-order-btn{
+    width:100%;padding:1rem;
+    background:var(--wa-green);color:#fff;
+    border:none;border-radius:2px;margin-top:1.2rem;
+    font-family:'Jost',sans-serif;font-size:0.62rem;
+    letter-spacing:0.2em;text-transform:uppercase;font-weight:500;
+    cursor:pointer;transition:opacity .2s;
+    display:flex;align-items:center;justify-content:center;gap:0.6rem;
+  }
+  .place-order-btn:hover{opacity:0.9;}
+  .place-order-btn svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.8;}
+
+  /* Order placed confirmation */
+  .confirm-state{display:none;text-align:center;padding:2rem 0;}
+  .confirm-state.show{display:block;}
+  .confirm-icon{width:56px;height:56px;border-radius:50%;border:1px solid var(--gold);display:flex;align-items:center;justify-content:center;margin:0 auto 1.2rem;}
+  .confirm-title{font-family:'Cormorant Garamond',serif;font-size:1.8rem;color:var(--white);margin-bottom:0.5rem;}
+  .confirm-sub{font-size:0.68rem;color:var(--muted);letter-spacing:0.1em;line-height:1.9;}
+  .confirm-wa-note{
+    display:inline-flex;align-items:center;gap:0.4rem;
+    margin-top:1rem;padding:0.5rem 1rem;
+    background:rgba(37,211,102,0.12);border:1px solid rgba(37,211,102,0.25);
+    border-radius:20px;font-size:0.62rem;color:#5fe485;letter-spacing:0.08em;
+  }
+  .menu-footer{text-align:center;padding:3rem 2rem 2rem;border-top:1px solid rgba(255,255,255,0.05);margin-top:3rem;}
+  .footer-logo{font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:var(--gold);letter-spacing:0.1em;margin-bottom:0.5rem;}
+  .footer-contact{font-size:0.62rem;color:var(--muted);letter-spacing:0.1em;line-height:2;}
+  .footer-contact a{color:var(--gold);text-decoration:none;}
+
+  /* ════════════════════════════════════════
+     DASHBOARD SCREEN
+  ════════════════════════════════════════ */
+  .dash-wrap{padding:1.5rem 1.25rem;max-width:520px;margin:0 auto;}
+  .dash-greeting{font-family:'Cormorant Garamond',serif;font-size:1.6rem;color:var(--white);margin-bottom:0.3rem;}
+  .dash-date{font-size:0.62rem;color:var(--muted);letter-spacing:0.15em;text-transform:uppercase;margin-bottom:1.5rem;}
+  .kpi-grid{display:grid;grid-template-columns:1fr 1fr;gap:0.75rem;margin-bottom:1.5rem;}
+  .kpi-card{background:var(--surface);border:1px solid rgba(201,169,110,0.1);border-radius:6px;padding:1rem 1.1rem;}
+  .kpi-label{font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);margin-bottom:0.4rem;}
+  .kpi-value{font-family:'Cormorant Garamond',serif;font-size:1.8rem;color:var(--white);line-height:1;}
+  .kpi-value span{font-family:'Jost',sans-serif;font-size:0.65rem;color:var(--muted);}
+  .kpi-trend{font-size:0.6rem;margin-top:0.3rem;}
+  .kpi-trend.up{color:#81c784;}
+  .kpi-trend.down{color:var(--red);}
+  .dash-section-title{font-size:0.6rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-bottom:0.75rem;margin-top:1.5rem;}
+  .live-order-card{background:var(--surface);border:1px solid rgba(201,169,110,0.1);border-radius:6px;padding:0.9rem 1rem;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.75rem;}
+  .live-status{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .live-status.pending{background:#ffb74d;box-shadow:0 0 6px #ffb74d66;}
+  .live-status.preparing{background:#64b5f6;box-shadow:0 0 6px #64b5f666;}
+  .live-status.done{background:#81c784;box-shadow:0 0 6px #81c78466;}
+  .live-order-info{flex:1;}
+  .live-order-table{font-size:0.7rem;color:var(--white);font-weight:500;}
+  .live-order-items{font-size:0.62rem;color:var(--muted);margin-top:1px;}
+  .live-order-time{font-size:0.6rem;color:var(--muted);text-align:right;}
+  .live-order-amt{font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--gold-light);text-align:right;}
+  .status-dot-label{font-size:0.55rem;letter-spacing:0.1em;text-transform:uppercase;}
+  .status-dot-label.pending{color:#ffb74d;}
+  .status-dot-label.preparing{color:#64b5f6;}
+  .status-dot-label.done{color:#81c784;}
+  .popular-item{margin-bottom:0.75rem;}
+  .pop-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;}
+  .pop-name{font-size:0.72rem;color:var(--text);}
+  .pop-count{font-size:0.62rem;color:var(--muted);}
+  .pop-bar-bg{height:4px;background:var(--surface2);border-radius:2px;}
+  .pop-bar{height:4px;background:linear-gradient(to right,var(--gold),var(--gold-light));border-radius:2px;transition:width .8s ease;}
+  .peak-chart{display:flex;align-items:flex-end;gap:4px;height:70px;margin-top:0.75rem;}
+  .peak-bar-wrap{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;}
+  .peak-bar{width:100%;background:var(--surface2);border-radius:2px 2px 0 0;transition:height .8s ease;}
+  .peak-bar.high{background:linear-gradient(to top,var(--gold),var(--gold-light));}
+  .peak-bar.mid{background:rgba(201,169,110,0.4);}
+  .peak-bar.low{background:var(--surface2);}
+  .peak-label{font-size:0.5rem;color:var(--muted);text-align:center;}
+
+  /* ════════════════════════════════════════
+     ORDER HISTORY SCREEN
+  ════════════════════════════════════════ */
+  .history-wrap{padding:1.5rem 1.25rem;max-width:520px;margin:0 auto;}
+  .history-title{font-family:'Cormorant Garamond',serif;font-size:1.5rem;color:var(--white);margin-bottom:0.25rem;}
+  .history-sub{font-size:0.62rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:1.2rem;}
+  .filter-row{display:flex;gap:0.5rem;margin-bottom:1.2rem;overflow-x:auto;scrollbar-width:none;padding-bottom:2px;}
+  .filter-row::-webkit-scrollbar{display:none;}
+  .filter-chip{flex-shrink:0;padding:0.4rem 0.9rem;border-radius:20px;border:1px solid rgba(201,169,110,0.2);background:transparent;color:var(--muted);font-size:0.6rem;letter-spacing:0.12em;text-transform:uppercase;cursor:pointer;font-family:'Jost',sans-serif;transition:all .2s;}
+  .filter-chip.active{background:var(--gold-dim);border-color:var(--gold);color:var(--gold);}
+  .hist-card{background:var(--surface);border:1px solid rgba(201,169,110,0.08);border-radius:6px;padding:1rem;margin-bottom:0.6rem;}
+  .hist-card-top{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.6rem;}
+  .hist-order-id{font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);}
+  .hist-date{font-size:0.6rem;color:var(--muted);}
+  .hist-table{font-size:0.68rem;color:var(--text);margin-bottom:0.35rem;}
+  .hist-items-list{font-size:0.65rem;color:var(--muted);line-height:1.7;}
+  .hist-card-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(255,255,255,0.05);}
+  .hist-total{font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:var(--gold-light);}
+  .hist-status{font-size:0.55rem;letter-spacing:0.12em;text-transform:uppercase;padding:3px 8px;border-radius:12px;}
+  .hist-status.completed{color:#81c784;background:rgba(129,199,132,0.1);}
+  .hist-status.cancelled{color:var(--red);background:rgba(229,115,115,0.1);}
+  .hist-status.pending{color:#ffb74d;background:rgba(255,183,77,0.1);}
+
+  /* ════════════════════════════════════════
+     ADMIN PANEL SCREEN
+  ════════════════════════════════════════ */
+  .admin-wrap{padding:1.5rem 1.25rem;max-width:520px;margin:0 auto;}
+  .admin-title{font-family:'Cormorant Garamond',serif;font-size:1.5rem;color:var(--white);margin-bottom:0.25rem;}
+  .admin-sub{font-size:0.62rem;color:var(--muted);letter-spacing:0.12em;text-transform:uppercase;margin-bottom:1.5rem;}
+  .admin-tabs{display:flex;gap:0;border-bottom:1px solid rgba(201,169,110,0.1);margin-bottom:1.2rem;}
+  .admin-tab{flex:1;padding:0.7rem 0;text-align:center;font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--muted);cursor:pointer;border:none;background:transparent;border-bottom:2px solid transparent;transition:all .2s;font-family:'Jost',sans-serif;}
+  .admin-tab.active{color:var(--gold);border-bottom-color:var(--gold);}
+  .admin-panel{display:none;}
+  .admin-panel.active{display:block;}
+  .menu-edit-item{display:flex;align-items:center;gap:0.6rem;padding:0.75rem 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+  .menu-edit-name{flex:1;font-size:0.78rem;color:var(--text);}
+  .menu-edit-price{font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--gold-light);min-width:3rem;text-align:right;}
+  .edit-btn-sm{width:28px;height:28px;border:1px solid rgba(201,169,110,0.2);border-radius:4px;background:transparent;color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.7rem;transition:all .2s;}
+  .edit-btn-sm:hover{color:var(--gold);border-color:var(--gold);}
+  .del-btn-sm{width:28px;height:28px;border:1px solid rgba(229,115,115,0.2);border-radius:4px;background:transparent;color:rgba(229,115,115,0.6);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:0.7rem;transition:all .2s;}
+  .del-btn-sm:hover{color:var(--red);border-color:var(--red);}
+  .avail-toggle{width:36px;height:20px;border-radius:10px;border:none;cursor:pointer;transition:background .3s;position:relative;flex-shrink:0;}
+  .avail-toggle.on{background:var(--gold);}
+  .avail-toggle.off{background:var(--surface2);}
+  .avail-toggle::after{content:'';position:absolute;width:14px;height:14px;border-radius:50%;background:white;top:3px;transition:left .3s;}
+  .avail-toggle.on::after{left:19px;}
+  .avail-toggle.off::after{left:3px;}
+  .add-item-form{background:var(--surface);border:1px solid rgba(201,169,110,0.1);border-radius:6px;padding:1rem;margin-top:1rem;}
+  .form-title{font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);margin-bottom:0.75rem;}
+  .form-row{margin-bottom:0.6rem;}
+  .form-label{font-size:0.6rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:0.3rem;}
+  .form-input{width:100%;background:var(--surface2);border:1px solid rgba(201,169,110,0.15);border-radius:3px;padding:0.5rem 0.7rem;color:var(--text);font-family:'Jost',sans-serif;font-size:0.78rem;outline:none;transition:border-color .2s;}
+  .form-input:focus{border-color:rgba(201,169,110,0.4);}
+  .form-select{width:100%;background:var(--surface2);border:1px solid rgba(201,169,110,0.15);border-radius:3px;padding:0.5rem 0.7rem;color:var(--text);font-family:'Jost',sans-serif;font-size:0.78rem;outline:none;appearance:none;}
+  .form-btn{width:100%;padding:0.7rem;background:var(--gold);color:var(--bg);border:none;border-radius:2px;margin-top:0.5rem;font-family:'Jost',sans-serif;font-size:0.6rem;letter-spacing:0.18em;text-transform:uppercase;font-weight:500;cursor:pointer;}
+  .setting-row{display:flex;align-items:center;justify-content:space-between;padding:0.9rem 0;border-bottom:1px solid rgba(255,255,255,0.04);}
+  .setting-label{font-size:0.75rem;color:var(--text);}
+  .setting-desc{font-size:0.62rem;color:var(--muted);margin-top:2px;}
+  .setting-val{font-size:0.75rem;color:var(--gold-light);}
+  .live-orders-admin{display:flex;flex-direction:column;gap:0.5rem;}
+  .admin-order-card{background:var(--surface);border:1px solid rgba(201,169,110,0.08);border-radius:6px;padding:0.9rem 1rem;}
+  .admin-order-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;}
+  .admin-order-table{font-size:0.7rem;color:var(--white);font-weight:500;}
+  .admin-order-time{font-size:0.6rem;color:var(--muted);}
+  .admin-order-items{font-size:0.65rem;color:var(--muted);margin-bottom:0.5rem;line-height:1.6;}
+  .admin-order-bottom{display:flex;justify-content:space-between;align-items:center;}
+  .admin-order-total{font-family:'Cormorant Garamond',serif;font-size:1rem;color:var(--gold-light);}
+  .status-select{background:var(--surface2);border:1px solid rgba(201,169,110,0.2);border-radius:3px;padding:3px 6px;color:var(--text);font-family:'Jost',sans-serif;font-size:0.6rem;outline:none;cursor:pointer;}
+
+  /* ════════════════════════════════════════
+     WHATSAPP GUIDE SCREEN
+  ════════════════════════════════════════ */
+  .wa-card{background:var(--surface);border:1px solid rgba(201,169,110,0.1);border-radius:8px;padding:1.2rem;margin-bottom:0.75rem;}
+  .wa-step-num{font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--gold);margin-bottom:0.3rem;}
+  .wa-step-title{font-size:0.82rem;color:var(--white);margin-bottom:0.3rem;font-weight:400;}
+  .wa-step-desc{font-size:0.68rem;color:var(--muted);line-height:1.7;}
+  .wa-step-desc code{background:var(--surface2);border-radius:3px;padding:1px 5px;color:var(--gold-light);font-size:0.65rem;}
+  .wa-step-desc a{color:var(--gold);text-decoration:none;}
+  .wa-divider{text-align:center;font-size:0.55rem;letter-spacing:0.2em;text-transform:uppercase;color:var(--muted);margin:0.5rem 0;}
+
+  /* ════════════════════════════════════════
+     STAFF PASSWORD MODAL
+  ════════════════════════════════════════ */
+  .staff-modal-overlay {
+    position:fixed; inset:0; z-index:800;
+    background:rgba(0,0,0,0.85); backdrop-filter:blur(12px);
+    display:none; align-items:center; justify-content:center; padding:1.5rem;
+  }
+  .staff-modal-overlay.open { display:flex; }
+  .staff-modal-box {
+    background:var(--surface); border:1px solid rgba(201,169,110,0.18);
+    border-radius:10px; padding:2rem; width:100%; max-width:340px;
+    text-align:center;
+  }
+  .staff-modal-icon {
+    width:52px;height:52px;border-radius:50%;
+    border:1px solid rgba(201,169,110,0.3);
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 1.2rem;
+  }
+  .staff-modal-title {
+    font-family:'Cormorant Garamond',serif;
+    font-size:1.4rem;color:var(--white);margin-bottom:0.3rem;
+  }
+  .staff-modal-sub {
+    font-size:0.62rem;color:var(--muted);
+    letter-spacing:0.12em;text-transform:uppercase;margin-bottom:1.5rem;
+  }
+  .staff-pw-input {
+    width:100%;background:var(--surface2);
+    border:1px solid rgba(201,169,110,0.2);
+    border-radius:3px;padding:0.7rem 1rem;
+    color:var(--text);font-family:'Jost',sans-serif;
+    font-size:0.82rem;outline:none;text-align:center;
+    letter-spacing:0.2em;margin-bottom:0.75rem;
+    transition:border-color .2s;
+  }
+  .staff-pw-input:focus { border-color:rgba(201,169,110,0.5); }
+  .staff-pw-btn {
+    width:100%;padding:0.8rem;background:var(--gold);
+    color:var(--bg);border:none;border-radius:2px;
+    font-family:'Jost',sans-serif;font-size:0.6rem;
+    letter-spacing:0.2em;text-transform:uppercase;font-weight:500;
+    cursor:pointer;transition:background .2s;margin-bottom:0.6rem;
+  }
+  .staff-pw-btn:hover { background:var(--gold-light); }
+  .staff-modal-cancel {
+    font-size:0.6rem;color:var(--muted);cursor:pointer;
+    background:none;border:none;letter-spacing:0.1em;
+    text-decoration:underline;text-underline-offset:3px;
+  }
+  .staff-pw-error {
+    font-size:0.65rem;color:var(--red);
+    margin-bottom:0.5rem;display:none;
+  }
+  .staff-pw-error.show { display:block; }
+
+  /* ════════════════════════════════════════
+     TOAST
+  ════════════════════════════════════════ */
+  .toast {
+    position:fixed; top:70px; left:50%;
+    transform:translateX(-50%) translateY(-20px);
+    background:var(--surface2);
+    border:1px solid rgba(201,169,110,0.2);
+    border-radius:4px; padding:0.6rem 1.2rem;
+    font-size:0.68rem; color:var(--text);
+    letter-spacing:0.06em; z-index:9999;
+    opacity:0; transition:all .3s;
+    white-space:nowrap; pointer-events:none;
+    max-width:calc(100vw - 2rem);
+    text-align:center;
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  .toast.toast-success { border-color:rgba(129,199,132,0.3); color:#81c784; }
+  .toast.toast-error   { border-color:rgba(229,115,115,0.3); color:var(--red); }
+
+  /* ════════════════════════════════════════
+     EDIT ITEM MODAL
+  ════════════════════════════════════════ */
+  .edit-modal{position:fixed;inset:0;z-index:600;display:none;align-items:center;justify-content:center;padding:1rem;}
+  .edit-modal.open{display:flex;}
+  .edit-modal-bg{position:absolute;inset:0;background:rgba(0,0,0,0.8);backdrop-filter:blur(8px);}
+  .edit-modal-box{position:relative;background:var(--surface);border:1px solid rgba(201,169,110,0.15);border-radius:8px;padding:1.5rem;width:100%;max-width:380px;}
+  .edit-modal-title{font-family:'Cormorant Garamond',serif;font-size:1.3rem;color:var(--white);margin-bottom:1rem;}
+  .edit-modal-actions{display:flex;gap:0.5rem;margin-top:1rem;}
+  .btn-cancel{flex:1;padding:0.7rem;background:transparent;border:1px solid rgba(201,169,110,0.2);color:var(--muted);border-radius:2px;font-family:'Jost',sans-serif;font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;cursor:pointer;}
+  .btn-save{flex:2;padding:0.7rem;background:var(--gold);color:var(--bg);border:none;border-radius:2px;font-family:'Jost',sans-serif;font-size:0.6rem;letter-spacing:0.15em;text-transform:uppercase;font-weight:500;cursor:pointer;}
+
+  /* Scrollbar */
+  ::-webkit-scrollbar{width:4px;}
+  ::-webkit-scrollbar-track{background:transparent;}
+  ::-webkit-scrollbar-thumb{background:rgba(201,169,110,0.2);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ══ TOP APP BAR ══ -->
+  <div class="app-bar">
+    <div class="app-bar-brand">The Bodhi Café</div>
+    <div class="app-bar-actions">
+      <span class="staff-badge" id="staffBadge">Staff Mode</span>
+      <button class="icon-btn" onclick="showToast('📶 Connected')" title="Connection Status">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1.5 8.5C5 5 9.25 3 12 3s7 2 10.5 5.5M5 12c1.9-1.9 4.3-3 7-3s5.1 1.1 7 3M8.5 15.5c1-1 2.2-1.5 3.5-1.5s2.5.5 3.5 1.5M12 19v.01"/></svg>
+      </button>
+      <button class="icon-btn" onclick="switchScreen('whatsapp')" title="WhatsApp Guide">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 21l1.65-3.8a9 9 0 113.4 2.9L3 21"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ CUSTOMER LANDING ══ (shown before browsing in customer mode) -->
+  <div class="customer-landing" id="customerLanding">
+    <div class="landing-bg"></div>
+    <div class="landing-ring lr1"></div>
+    <div class="landing-ring lr2"></div>
+    <div class="landing-ring lr3"></div>
+    <div class="landing-ring lr4"></div>
+    <div class="landing-content">
+      <p class="landing-eyebrow">Est. · Crafted with love</p>
+      <h1 class="landing-title">The Bodhi<br><em>Café</em></h1>
+      <p class="landing-subtitle">Good food · Good vibes · Great coffee<br>Tap to explore our full menu</p>
+      <button class="landing-cta" onclick="openMenuFromLanding()">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        View Menu
+      </button>
+      <br>
+      <button class="landing-staff-link" onclick="promptStaffLogin()">Staff access</button>
+    </div>
+  </div>
+
+  <!-- ══ MENU SCREEN ══ -->
+  <div class="screen" id="screen-menu">
+    <div class="hero">
+      <div class="hero-bg"></div>
+      <div class="hero-ring ring-1"></div>
+      <div class="hero-ring ring-2"></div>
+      <div class="hero-ring ring-3"></div>
+      <p class="hero-eyebrow">Est. · The Bodhi Café</p>
+      <h1 class="hero-title">Our <em>Menu</em></h1>
+      <p class="hero-sub">Good food · Good vibes · Great coffee</p>
+    </div>
+
+    <div class="search-wrap" style="position:relative;">
+      <span class="search-icon">🔍</span>
+      <input class="search-input" type="text" placeholder="Search dishes…" id="searchInput" oninput="filterMenu(this.value)" style="padding-left:2.2rem;">
+    </div>
+
+    <div class="cat-tabs" id="catTabs">
+      <button class="cat-tab active" data-target="coffee">Coffee & Tea</button>
+      <button class="cat-tab" data-target="cold">Cold Drinks</button>
+      <button class="cat-tab" data-target="snacks">Snacks</button>
+      <button class="cat-tab" data-target="pizza">Pizza & Pasta</button>
+      <button class="cat-tab" data-target="burger">Burgers</button>
+    </div>
+
+    <div class="menu-container">
+      <section class="section" id="coffee">
+        <div class="section-header"><span class="section-title">Coffee & Tea</span></div>
+        <div id="items-coffee"></div>
+      </section>
+      <section class="section" id="cold">
+        <div class="section-header"><span class="section-title">Cold Beverages</span></div>
+        <div id="items-cold"></div>
+      </section>
+      <section class="section" id="snacks">
+        <div class="section-header"><span class="section-title">Snacks</span></div>
+        <div id="items-snacks"></div>
+      </section>
+      <section class="section" id="pizza">
+        <div class="section-header"><span class="section-title">Pizza & Pastas</span></div>
+        <div id="items-pizza"></div>
+      </section>
+      <section class="section" id="burger">
+        <div class="section-header"><span class="section-title">Burgers & Sandwiches</span></div>
+        <p class="category-note">Served with homemade potato chips</p>
+        <div id="items-burger"></div>
+      </section>
+      <footer class="menu-footer">
+        <div class="footer-logo">The Bodhi Café</div>
+        <div class="footer-contact">
+          Complaints & Enquiry<br>
+          <a href="tel:8016306629">+91 80163 06629</a>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Cart bar -->
+    <div class="cart-bar" id="cartBar">
+      <button class="cart-btn" id="cartBtn" onclick="openModal()">
+        <span id="cartLabel">View Order</span>
+        <span class="cart-count-pill" id="cartCount">0</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ DASHBOARD SCREEN ══ (Staff only) -->
+  <div class="screen" id="screen-dashboard">
+    <div class="dash-wrap">
+      <div class="dash-greeting" id="dashGreeting">Good morning ☀️</div>
+      <div class="dash-date" id="dashDate">Loading…</div>
+
+      <div class="kpi-grid">
+        <div class="kpi-card">
+          <div class="kpi-label">Today's Revenue</div>
+          <div class="kpi-value">₹<span id="kpi-revenue">0</span></div>
+          <div class="kpi-trend" id="kpi-rev-trend" style="color:var(--muted);">No orders yet</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Orders Today</div>
+          <div class="kpi-value" id="kpi-orders">0</div>
+          <div class="kpi-trend" style="color:var(--muted);">Live count</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Avg. Order Value</div>
+          <div class="kpi-value">₹<span id="kpi-avg">0</span></div>
+          <div class="kpi-trend" style="color:var(--muted);">Per order today</div>
+        </div>
+        <div class="kpi-card">
+          <div class="kpi-label">Active Tables</div>
+          <div class="kpi-value" id="kpi-tables">0</div>
+          <div class="kpi-trend" style="color:var(--muted);" id="kpi-tables-sub">of 12 occupied</div>
+        </div>
+      </div>
+
+      <div class="dash-section-title">📋 Live Orders</div>
+      <div id="liveOrdersList"></div>
+
+      <div class="dash-section-title">🔥 Popular Today</div>
+      <div id="popularList"></div>
+
+      <div class="dash-section-title">⏰ Peak Hours (Today)</div>
+      <div class="peak-chart" id="peakChart"></div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;">
+        <span style="font-size:0.5rem;color:var(--muted);">8am</span>
+        <span style="font-size:0.5rem;color:var(--muted);">10am</span>
+        <span style="font-size:0.5rem;color:var(--muted);">12pm</span>
+        <span style="font-size:0.5rem;color:var(--muted);">2pm</span>
+        <span style="font-size:0.5rem;color:var(--muted);">4pm</span>
+        <span style="font-size:0.5rem;color:var(--muted);">6pm</span>
+        <span style="font-size:0.5rem;color:var(--muted);">8pm</span>
+        <span style="font-size:0.5rem;color:var(--muted);">10pm</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ ORDER HISTORY SCREEN ══ (Staff only) -->
+  <div class="screen" id="screen-history">
+    <div class="history-wrap">
+      <div class="history-title">Order History</div>
+      <div class="history-sub">All transactions · Database</div>
+      <div class="filter-row">
+        <button class="filter-chip active" onclick="filterHistory('all',this)">All</button>
+        <button class="filter-chip" onclick="filterHistory('completed',this)">Completed</button>
+        <button class="filter-chip" onclick="filterHistory('pending',this)">Pending</button>
+        <button class="filter-chip" onclick="filterHistory('cancelled',this)">Cancelled</button>
+        <button class="filter-chip" onclick="filterHistory('today',this)">Today</button>
+      </div>
+      <div id="historyList"></div>
+    </div>
+  </div>
+
+  <!-- ══ ADMIN PANEL SCREEN ══ (Staff only) -->
+  <div class="screen" id="screen-admin">
+    <div class="admin-wrap">
+      <div class="admin-title">Admin Panel</div>
+      <div class="admin-sub">Manage menu · Settings · Orders</div>
+
+      <div class="admin-tabs">
+        <button class="admin-tab active" onclick="switchAdminTab('menu',this)">Menu</button>
+        <button class="admin-tab" onclick="switchAdminTab('orders',this)">Orders</button>
+        <button class="admin-tab" onclick="switchAdminTab('settings',this)">Settings</button>
+      </div>
+
+      <!-- Menu Editor -->
+      <div class="admin-panel active" id="admin-menu">
+        <div class="dash-section-title" style="margin-top:0;">Edit Menu Items</div>
+        <div id="adminMenuList"></div>
+        <div class="add-item-form">
+          <div class="form-title">+ Add New Item</div>
+          <div class="form-row">
+            <label class="form-label">Item Name</label>
+            <input class="form-input" type="text" id="newItemName" placeholder="e.g. Mango Smoothie">
+          </div>
+          <div class="form-row">
+            <label class="form-label">Description</label>
+            <input class="form-input" type="text" id="newItemDesc" placeholder="Short description">
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.6rem;">
+            <div class="form-row" style="margin-bottom:0;">
+              <label class="form-label">Price (₹)</label>
+              <input class="form-input" type="number" id="newItemPrice" placeholder="0">
+            </div>
+            <div class="form-row" style="margin-bottom:0;">
+              <label class="form-label">Category</label>
+              <select class="form-select" id="newItemCat">
+                <option value="coffee">Coffee & Tea</option>
+                <option value="cold">Cold Drinks</option>
+                <option value="snacks">Snacks</option>
+                <option value="pizza">Pizza & Pasta</option>
+                <option value="burger">Burgers</option>
+              </select>
+            </div>
+          </div>
+          <button class="form-btn" onclick="addNewItem()">Add to Menu</button>
+        </div>
+      </div>
+
+      <!-- Live Orders Management -->
+      <div class="admin-panel" id="admin-orders">
+        <div class="dash-section-title" style="margin-top:0;">Manage Orders</div>
+        <div class="live-orders-admin" id="adminOrdersList"></div>
+      </div>
+
+      <!-- Settings -->
+      <div class="admin-panel" id="admin-settings">
+        <div class="dash-section-title" style="margin-top:0;">Café Settings</div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Café Name</div>
+            <div class="setting-desc">Displayed throughout the app</div>
+          </div>
+          <div class="setting-val">The Bodhi Café</div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Phone Number</div>
+            <div class="setting-desc">For complaints & enquiries</div>
+          </div>
+          <div class="setting-val">+91 80163 06629</div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">WhatsApp Orders</div>
+            <div class="setting-desc">Receive orders via WhatsApp</div>
+          </div>
+          <div class="avail-toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off');showToast('WhatsApp orders updated')"></div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Table Ordering</div>
+            <div class="setting-desc">Allow QR table-based orders</div>
+          </div>
+          <div class="avail-toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off');showToast('Table ordering updated')"></div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Kitchen Display</div>
+            <div class="setting-desc">Show orders on kitchen screen</div>
+          </div>
+          <div class="avail-toggle off" onclick="this.classList.toggle('on');this.classList.toggle('off');showToast('Kitchen display updated')"></div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Auto-confirm Orders</div>
+            <div class="setting-desc">Skip manual confirmation</div>
+          </div>
+          <div class="avail-toggle off" onclick="this.classList.toggle('on');this.classList.toggle('off');showToast('Auto-confirm updated')"></div>
+        </div>
+        <div class="setting-row">
+          <div class="setting-info">
+            <div class="setting-label">Café Open</div>
+            <div class="setting-desc">Toggle to open / close ordering</div>
+          </div>
+          <div class="avail-toggle on" onclick="this.classList.toggle('on');this.classList.toggle('off');showToast('Café status updated')"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ WHATSAPP GUIDE SCREEN ══ -->
+  <div class="screen" id="screen-whatsapp">
+    <div class="admin-wrap">
+      <div class="admin-title">WhatsApp Orders</div>
+      <div class="admin-sub">Direct ordering via WhatsApp</div>
+
+      <div class="wa-card" style="border-color:rgba(37,211,102,0.25);background:rgba(37,211,102,0.04);">
+        <div class="wa-step-num">✅ Live & Ready</div>
+        <div class="wa-step-title">Direct WhatsApp Ordering is Active</div>
+        <div class="wa-step-desc">
+          When a customer places an order, a beautifully formatted WhatsApp message is automatically sent to <strong style="color:var(--gold-light);">+91 80163 06629</strong>. No API setup needed — it opens WhatsApp instantly with the order details pre-filled.
+        </div>
+      </div>
+
+      <div class="wa-card">
+        <div class="wa-step-num">How it works</div>
+        <div class="wa-step-title">Customer places order → WhatsApp opens</div>
+        <div class="wa-step-desc">
+          1. Customer browses the menu & adds items to cart.<br>
+          2. They tap "View Order", enter their table number.<br>
+          3. Tap "Send Order via WhatsApp" — their phone opens WhatsApp with the complete order pre-filled.<br>
+          4. They press Send — the order lands on your phone instantly. 🪷
+        </div>
+      </div>
+
+      <div class="wa-card">
+        <div class="wa-step-num">Step 01 · For Full API Integration</div>
+        <div class="wa-step-title">Create a Meta Business Account</div>
+        <div class="wa-step-desc">
+          Go to <a href="https://business.facebook.com" target="_blank">business.facebook.com</a> and create a free Meta Business account using your café's Facebook page or email. This is required for the official WhatsApp Business API.
+        </div>
+      </div>
+
+      <div class="wa-card">
+        <div class="wa-step-num">Step 02</div>
+        <div class="wa-step-title">Apply for WhatsApp Business API</div>
+        <div class="wa-step-desc">
+          Visit <a href="https://developers.facebook.com/docs/whatsapp" target="_blank">developers.facebook.com/docs/whatsapp</a> → Click "Get Started" → Add a WhatsApp product. You'll need a verified phone number and business documents.
+        </div>
+      </div>
+
+      <div class="wa-card">
+        <div class="wa-step-num">Step 03 · Recommended</div>
+        <div class="wa-step-title">Choose a BSP (No-Code Option)</div>
+        <div class="wa-step-desc">
+          Use a Business Solution Provider like <strong style="color:var(--gold-light);">Interakt, AiSensy, Wati, or Zoko</strong> — ₹799–₹2,499/month, no coding needed. Sign up at <a href="https://interakt.ai" target="_blank">interakt.ai</a> or <a href="https://aisensy.com" target="_blank">aisensy.com</a>.
+        </div>
+      </div>
+
+      <div class="wa-card">
+        <div class="wa-step-num">Step 04 · Custom Dev</div>
+        <div class="wa-step-title">Set Up Your Webhook</div>
+        <div class="wa-step-desc">
+          When a customer places an order, the app can send a POST to your backend which forwards to WhatsApp via:<br><br>
+          <code>POST https://graph.facebook.com/v18.0/{phone-id}/messages</code>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ BOTTOM NAV ══ -->
+  <nav class="bottom-nav">
+    <button class="bnav-item active" id="bnav-menu" onclick="switchScreen('menu')">
+      <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      Menu
+    </button>
+    <!-- Staff-only nav items: hidden in customer mode -->
+    <button class="bnav-item staff-only" id="bnav-dashboard" onclick="switchScreen('dashboard')">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+      Dashboard
+    </button>
+    <button class="bnav-item staff-only" id="bnav-history" onclick="switchScreen('history')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 3"/></svg>
+      History
+      <div class="bnav-badge" id="history-badge">0</div>
+    </button>
+    <button class="bnav-item staff-only" id="bnav-admin" onclick="switchScreen('admin')">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3"/><path d="M6 20v-1a6 6 0 0112 0v1"/><path d="M18 12l2 2-5 5-2.5-2.5"/></svg>
+      Admin
+    </button>
+    <button class="bnav-item" id="bnav-whatsapp" onclick="switchScreen('whatsapp')">
+      <svg viewBox="0 0 24 24"><path d="M3 21l1.65-3.8a9 9 0 113.4 2.9L3 21"/><path d="M9 10c0 3.3 2.6 6 6 6"/></svg>
+      WhatsApp
+    </button>
+  </nav>
+
+</div><!-- /#app -->
+
+<!-- ══ ORDER MODAL ══ -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal()"></div>
+<div class="modal" id="modal">
+  <div class="modal-handle"></div>
+  <div id="modalContent">
+    <h2 class="modal-title">Your Order</h2>
+    <p class="modal-sub">Review before placing</p>
+    <div id="orderList"></div>
+    <div class="order-total">
+      <span class="total-label">Total</span>
+      <span class="total-amount" id="totalAmount">₹0</span>
+    </div>
+    <div class="table-input-row">
+      <span class="table-label">Table No.</span>
+      <input class="table-input" type="text" id="tableInput" placeholder="e.g. 4" inputmode="numeric">
+    </div>
+    <button class="place-order-btn" onclick="placeOrder()">
+      <svg viewBox="0 0 24 24"><path d="M3 21l1.65-3.8a9 9 0 113.4 2.9L3 21"/><path d="M9 10c0 3.3 2.6 6 6 6"/></svg>
+      Send Order via WhatsApp
+    </button>
+  </div>
+  <div class="confirm-state" id="confirmState">
+    <div class="confirm-icon">
+      <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M5 12l5 5L19 7" stroke="#c9a96e" stroke-width="1.5" stroke-linecap:round"/></svg>
+    </div>
+    <div class="confirm-title">Order Sent!</div>
+    <div class="confirm-sub">
+      Your order has been sent via WhatsApp.<br>
+      We'll bring it to your table shortly. 🪷
+    </div>
+    <div class="confirm-wa-note">
+      📱 Sent to kitchen via WhatsApp
+    </div>
+  </div>
+</div>
+
+<!-- ══ EDIT ITEM MODAL ══ -->
+<div class="edit-modal" id="editModal">
+  <div class="edit-modal-bg" onclick="closeEditModal()"></div>
+  <div class="edit-modal-box">
+    <div class="edit-modal-title">Edit Item</div>
+    <input type="hidden" id="editCat">
+    <input type="hidden" id="editIdx">
+    <div class="form-row"><label class="form-label">Name</label><input class="form-input" id="editName"></div>
+    <div class="form-row"><label class="form-label">Description</label><input class="form-input" id="editDesc"></div>
+    <div class="form-row"><label class="form-label">Price (₹)</label><input class="form-input" type="number" id="editPrice"></div>
+    <div class="edit-modal-actions">
+      <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+      <button class="btn-save" onclick="saveEdit()">Save Changes</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ STAFF PASSWORD MODAL ══ -->
+<div class="staff-modal-overlay" id="staffModal">
+  <div class="staff-modal-box">
+    <div class="staff-modal-icon">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#c9a96e" stroke-width="1.5" stroke-linecap="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
+    </div>
+    <div class="staff-modal-title">Staff Access</div>
+    <div class="staff-modal-sub">Enter password to continue</div>
+    <div class="staff-pw-error" id="pwError">Incorrect password. Please try again.</div>
+    <input class="staff-pw-input" type="password" id="staffPwInput" placeholder="••••••••" onkeydown="if(event.key==='Enter')verifyStaffPassword()">
+    <button class="staff-pw-btn" onclick="verifyStaffPassword()">Unlock Staff Mode</button>
+    <button class="staff-modal-cancel" onclick="closeStaffModal()">Cancel</button>
+  </div>
+</div>
+
+<!-- ══ TOAST ══ -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ════════════════════════════════════════════════════════
+   ⚙️  CONFIGURATION — Easy to change
+════════════════════════════════════════════════════════ */
+const CONFIG = {
+  STAFF_PASSWORD:  'bodhi2026',            // Change this to your desired staff password
+  WHATSAPP_NUMBER: '918016306629',          // WhatsApp number (no + or spaces)
+  CAFE_NAME:       'The Bodhi Café',
+  CAFE_PHONE:      '8016306629',
+};
+
+/* ════════════════════════════════════════════════════════
+   📋  MENU DATA
+════════════════════════════════════════════════════════ */
+const menuData = {
+  coffee: [
+    { name:"Espresso",    price:50,  desc:"Rich, bold single shot",            popular:false, available:true },
+    { name:"Americano",   price:50,  desc:"Espresso diluted with hot water",   popular:false, available:true },
+    { name:"Cappuccino",  price:50,  desc:"Espresso with steamed milk foam",   popular:true,  available:true },
+    { name:"Café Latte",  price:50,  desc:"Smooth espresso & steamed milk",    popular:true,  available:true },
+    { name:"Green Tea",   price:40,  desc:"Light & refreshing whole leaf",     popular:false, available:true },
+  ],
+  cold: [
+    { name:"Virgin Mojito",    price:100, desc:"Mint, lime, soda — utterly refreshing",   popular:true,  available:true },
+    { name:"Peach Ice Tea",    price:120, desc:"Chilled brewed tea with peach",           popular:false, available:true },
+    { name:"Strawberry Shake", price:120, desc:"Thick blended strawberry shake",          popular:true,  available:true },
+    { name:"Chocolate Shake",  price:120, desc:"Rich, creamy chocolate shake",            popular:false, available:true },
+    { name:"Cold Coffee",      price:120, desc:"Iced blended coffee",                     popular:true,  available:true },
+    { name:"Cold Drink",       price:null,desc:"Ask your server for today's selection",   popular:false, available:true },
+    { name:"Ice Cream",        price:30,  desc:"Per scoop · Vanilla, Chocolate, Strawberry", popular:false, available:true, badge:"scoop" },
+  ],
+  snacks: [
+    { name:"Classic French Fries",       price:80,  desc:"Golden & crispy",                                      popular:true,  available:true },
+    { name:"Peri Peri French Fries",     price:90,  desc:"Spiced with house peri peri blend",                    popular:false, available:true },
+    { name:"Bombay Vada Pav",            price:50,  desc:"Street-style spiced potato fritter",                   popular:false, available:true },
+    { name:"Butter Cheese Garlic Bread", price:100, desc:"Toasted with garlic butter & cheese",                  popular:true,  available:true },
+    { name:"Salsa Pesto Garlic Bread",   price:100, desc:"Garlic bread with salsa & pesto",                      popular:false, available:true },
+    { name:"Chilli Cheese Toast",        price:100, desc:"Spicy cheese toast, grilled to perfection",            popular:false, available:true },
+    { name:"Potato Cheese Balls",        price:100, desc:"Crisp outside, gooey inside",                          popular:false, available:true },
+    { name:"Sizzling Brownie",           price:135, desc:"Warm brownie with hot chocolate sauce & ice cream",    popular:true,  available:true },
+  ],
+  pizza: [
+    { name:"Margherita Pizza",  price:200, desc:"Classic — tomatoes, basil, olive oil & mozzarella",         popular:true,  available:true },
+    { name:"Fresh Farm Pizza",  price:220, desc:"Assortment of exotic veggies baked to perfection",          popular:false, available:true },
+    { name:"Pesto Pizza",       price:220, desc:"Special sauce, basil, tomatoes & Parmesan",                 popular:false, available:true },
+    { name:"Mac & Cheese",      price:220, desc:"Tender macaroni smothered in a creamy cheesy sauce",        popular:true,  available:true },
+  ],
+  burger: [
+    { name:"Aloo Tikki Burger",       price:140, desc:"Flavoured potato patty, spiced mayo, cucumber, tomato, onion & cheese", popular:false, available:true },
+    { name:"Mushroom Burger",         price:160, desc:"Grilled mushroom patty, spiced mayo, cucumber, tomato, onion & cheese", popular:true,  available:true },
+    { name:"Grilled Paneer Burger",   price:160, desc:"Marinated paneer, grilled with special homemade sauce & cheese",        popular:true,  available:true },
+    { name:"Cheese Grilled Sandwich", price:160, desc:"Pesto mayo dressing with 2 variety cheeses, butter grilled",           popular:false, available:true },
+    { name:"Bombay Street Sandwich",  price:160, desc:"Mumbai-style with mint chutney, onion, tomato, cucumber, potato & cheese", popular:false, available:true },
+  ],
+};
+
+/* ════════════════════════════════════════════════════════
+   📦  ORDER DATABASE (demo data)
+════════════════════════════════════════════════════════ */
+let orderDB = [];
+
+/* ════════════════════════════════════════════════════════
+   🔐  STAFF MODE STATE
+════════════════════════════════════════════════════════ */
+let isStaffMode = false;
+let cart = {};
+let currentScreen = 'menu';
+let showingLanding = false; // tracks whether the landing overlay is visible
+
+/**
+ * Initialise app: check URL param ?staff=true
+ * and decide which experience to show.
+ */
+function initApp() {
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('staff') === 'true') {
+    activateStaffMode(false); // silent activation from URL
+  } else {
+    // Customer mode: show the beautiful landing first
+    showCustomerLanding();
+  }
+  renderAll();
+}
+
+/** Show the full-screen customer landing overlay */
+function showCustomerLanding() {
+  showingLanding = true;
+  document.getElementById('customerLanding').classList.add('show');
+  // Hide the screen behind it (no active screen visible)
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+}
+
+/** Customer tapped "View Menu" on the landing */
+function openMenuFromLanding() {
+  showingLanding = false;
+  document.getElementById('customerLanding').classList.remove('show');
+  switchScreen('menu');
+}
+
+/* ── STAFF MODE ACTIVATION ── */
+
+/** Show the staff password prompt modal */
+function promptStaffLogin() {
+  document.getElementById('staffModal').classList.add('open');
+  document.getElementById('staffPwInput').value = '';
+  document.getElementById('pwError').classList.remove('show');
+  setTimeout(() => document.getElementById('staffPwInput').focus(), 300);
+}
+
+/** Verify entered password */
+function verifyStaffPassword() {
+  const entered = document.getElementById('staffPwInput').value;
+  if (entered === CONFIG.STAFF_PASSWORD) {
+    closeStaffModal();
+    activateStaffMode(true);
+  } else {
+    document.getElementById('pwError').classList.add('show');
+    document.getElementById('staffPwInput').value = '';
+    document.getElementById('staffPwInput').focus();
+  }
+}
+
+/** Close the staff password modal */
+function closeStaffModal() {
+  document.getElementById('staffModal').classList.remove('open');
+}
+
+/**
+ * Activate full staff mode.
+ * @param {boolean} addToUrl - Whether to add ?staff=true to the URL
+ */
+function activateStaffMode(addToUrl) {
+  isStaffMode = true;
+
+  // Show staff badge in top bar
+  document.getElementById('staffBadge').classList.add('show');
+
+  // Show all staff-only nav items
+  document.querySelectorAll('.bnav-item.staff-only').forEach(el => el.classList.add('show'));
+
+  // If coming from landing, clear it
+  if (showingLanding) {
+    showingLanding = false;
+    document.getElementById('customerLanding').classList.remove('show');
+  }
+
+  // Persist in URL so page refresh keeps staff mode
+  if (addToUrl) {
+    const url = new URL(window.location.href);
+    url.searchParams.set('staff', 'true');
+    window.history.replaceState({}, '', url.toString());
+    showToast('🔓 Staff mode activated', 'success');
+  }
+
+  // Navigate to menu if no screen is currently active
+  if (!document.querySelector('.screen.active')) {
+    switchScreen('menu');
+  }
+}
+
+/* ════════════════════════════════════════════════════════
+   🧭  SCREEN SWITCHING
+════════════════════════════════════════════════════════ */
+function switchScreen(screen) {
+  // Guard: staff-only screens
+  const staffScreens = ['dashboard', 'history', 'admin'];
+  if (staffScreens.includes(screen) && !isStaffMode) {
+    promptStaffLogin();
+    return;
+  }
+
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.bnav-item').forEach(b => b.classList.remove('active'));
+  document.getElementById('screen-' + screen).classList.add('active');
+  const btn = document.getElementById('bnav-' + screen);
+  if (btn) btn.classList.add('active');
+  currentScreen = screen;
+
+  if (screen === 'dashboard') renderDashboard();
+  if (screen === 'history')   renderHistory('all');
+  if (screen === 'admin')     renderAdminMenu();
+}
+
+/* ════════════════════════════════════════════════════════
+   🍞  TOAST NOTIFICATIONS
+════════════════════════════════════════════════════════ */
+let toastTimer;
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' toast-' + type : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, 2400);
+}
+
+/* ════════════════════════════════════════════════════════
+   🍽️  MENU RENDERING
+════════════════════════════════════════════════════════ */
+function renderItems(category) {
+  const container = document.getElementById('items-' + category);
+  if (!container) return;
+  container.innerHTML = '';
+  menuData[category].forEach((item, i) => {
+    if (!item.available) return;
+    const id  = category + '-' + i;
+    const qty = cart[id]?.qty || 0;
+    const priceDisplay = item.price ? '<span class="price-unit">₹</span>' + item.price : '—';
+    const badgeHtml    = item.badge   ? '<span class="badge">' + item.badge + '</span>' : '';
+    const popBadge     = item.popular ? '<span class="badge popular-badge">Popular</span>' : '';
+    const rightHtml    = qty === 0
+      ? '<button class="add-btn" onclick="addItem(\'' + id + '\',\'' + category + '\',' + i + ')">+</button>'
+      : '<div class="counter"><button class="counter-btn" onclick="changeQty(\'' + id + '\',\'' + category + '\',' + i + ',-1)">−</button><span class="counter-num">' + qty + '</span><button class="counter-btn" onclick="changeQty(\'' + id + '\',\'' + category + '\',' + i + ',1)">+</button></div>';
+    container.innerHTML += '<div class="menu-item" id="item-' + id + '"><div class="item-info"><div class="item-name"><span class="veg-dot"></span>' + item.name + badgeHtml + popBadge + '</div><div class="item-desc">' + item.desc + '</div></div><div class="item-right"><div class="item-price">' + priceDisplay + '</div>' + rightHtml + '</div></div>';
+  });
+}
+
+function renderAll() { Object.keys(menuData).forEach(renderItems); }
+
+function filterMenu(q) {
+  q = q.toLowerCase();
+  Object.keys(menuData).forEach(cat => {
+    const container = document.getElementById('items-' + cat);
+    if (!container) return;
+    container.innerHTML = '';
+    menuData[cat].forEach((item, i) => {
+      if (!item.available) return;
+      if (q && !item.name.toLowerCase().includes(q) && !item.desc.toLowerCase().includes(q)) return;
+      const id  = cat + '-' + i;
+      const qty = cart[id]?.qty || 0;
+      const priceDisplay = item.price ? '<span class="price-unit">₹</span>' + item.price : '—';
+      const popBadge     = item.popular ? '<span class="badge popular-badge">Popular</span>' : '';
+      const rightHtml    = qty === 0
+        ? '<button class="add-btn" onclick="addItem(\'' + id + '\',\'' + cat + '\',' + i + ')">+</button>'
+        : '<div class="counter"><button class="counter-btn" onclick="changeQty(\'' + id + '\',\'' + cat + '\',' + i + ',-1)">−</button><span class="counter-num">' + qty + '</span><button class="counter-btn" onclick="changeQty(\'' + id + '\',\'' + cat + '\',' + i + ',1)">+</button></div>';
+      container.innerHTML += '<div class="menu-item"><div class="item-info"><div class="item-name"><span class="veg-dot"></span>' + item.name + popBadge + '</div><div class="item-desc">' + item.desc + '</div></div><div class="item-right"><div class="item-price">' + priceDisplay + '</div>' + rightHtml + '</div></div>';
+    });
+  });
+}
+
+/* ════════════════════════════════════════════════════════
+   🛒  CART LOGIC
+════════════════════════════════════════════════════════ */
+function addItem(id, cat, idx) {
+  const item = menuData[cat][idx];
+  cart[id] = { name:item.name, price:item.price||0, qty:1, id };
+  renderItems(cat);
+  updateCart();
+  showToast('✓ ' + item.name + ' added');
+}
+
+function changeQty(id, cat, idx, delta) {
+  if (!cart[id]) return;
+  cart[id].qty += delta;
+  if (cart[id].qty <= 0) delete cart[id];
+  renderItems(cat);
+  updateCart();
+}
+
+function updateCart() {
+  const count = Object.values(cart).reduce((s, i) => s + i.qty, 0);
+  document.getElementById('cartCount').textContent = count;
+  document.getElementById('cartBar').classList.toggle('visible', count > 0);
+}
+
+/* ════════════════════════════════════════════════════════
+   📦  ORDER MODAL
+════════════════════════════════════════════════════════ */
+function openModal() {
+  document.getElementById('confirmState').classList.remove('show');
+  document.getElementById('modalContent').style.display = '';
+  const list = document.getElementById('orderList');
+  list.innerHTML = '';
+  let total = 0;
+  Object.values(cart).forEach(i => {
+    const sub = i.price * i.qty;
+    total += sub;
+    list.innerHTML += '<div class="order-item"><div><div class="order-item-name">' + i.name + '</div><div class="order-item-detail">Qty: ' + i.qty + ' × ₹' + i.price + '</div></div><div class="order-item-price">₹' + sub + '</div></div>';
+  });
+  document.getElementById('totalAmount').textContent = '₹' + total;
+  document.getElementById('modal').classList.add('open');
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modal').classList.remove('open');
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+
+/* ════════════════════════════════════════════════════════
+   📱  PLACE ORDER → WHATSAPP
+════════════════════════════════════════════════════════ */
+function placeOrder() {
+  const table = document.getElementById('tableInput').value.trim() || '?';
+  const items  = Object.values(cart);
+
+  if (items.length === 0) {
+    showToast('Your cart is empty!', 'error');
+    return;
+  }
+
+  const total = items.reduce((s, i) => s + i.price * i.qty, 0);
+  const now   = new Date();
+  const time  = now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+
+  // ── Build WhatsApp message ──
+  const itemLines = items.map(i => {
+    const sub = i.price * i.qty;
+    return '  • ' + i.name + ' ×' + i.qty + ' — ₹' + sub;
+  }).join('\n');
+
+  const waMessage =
+    '🪷 *New Order — ' + CONFIG.CAFE_NAME + '*\n' +
+    '━━━━━━━━━━━━━━━━\n' +
+    '🪑 *Table:* ' + table + '\n' +
+    '🕐 *Time:* ' + time + '\n' +
+    '━━━━━━━━━━━━━━━━\n' +
+    '*Items:*\n' + itemLines + '\n' +
+    '━━━━━━━━━━━━━━━━\n' +
+    '💰 *Grand Total: ₹' + total + '*\n' +
+    '━━━━━━━━━━━━━━━━\n' +
+    '_Sent from Bodhi Café e-Menu_';
+
+  // ── Save to local order DB ──
+  const newOrder = {
+    id:     'ORD-' + String(orderDB.length + 1).padStart(3, '0'),
+    table, items, total,
+    status: 'pending',
+    time,
+    date:   'Today'
+  };
+  orderDB.unshift(newOrder);
+
+  // ── Update history badge with pending/preparing count ──
+  const pendingCount = orderDB.filter(o => o.date === 'Today' && (o.status === 'pending' || o.status === 'preparing')).length;
+  const badge = document.getElementById('history-badge');
+  badge.textContent = pendingCount;
+  badge.classList.toggle('show', pendingCount > 0);
+
+  // ── Refresh dashboard if currently viewing it ──
+  if (currentScreen === 'dashboard') renderDashboard();
+  document.getElementById('modalContent').style.display = 'none';
+  document.getElementById('confirmState').classList.add('show');
+  document.getElementById('history-badge').classList.add('show');
+
+  // ── Open WhatsApp ──
+  const encodedMsg = encodeURIComponent(waMessage);
+  const waUrl = 'https://wa.me/' + CONFIG.WHATSAPP_NUMBER + '?text=' + encodedMsg;
+
+  // Small delay so the confirmation UI is visible before redirect
+  setTimeout(() => { window.open(waUrl, '_blank'); }, 600);
+
+  // ── Reset cart after 3.5s ──
+  setTimeout(() => {
+    cart = {};
+    renderAll();
+    updateCart();
+    closeModal();
+    document.getElementById('tableInput').value = '';
+  }, 3500);
+}
+
+/* ════════════════════════════════════════════════════════
+   📊  DASHBOARD
+════════════════════════════════════════════════════════ */
+function renderDashboard() {
+  const now  = new Date();
+  const hour = now.getHours();
+  const greet = hour < 12 ? 'Good morning ☀️' : hour < 17 ? 'Good afternoon 🌤️' : 'Good evening 🌙';
+  document.getElementById('dashGreeting').textContent = greet;
+  document.getElementById('dashDate').textContent = now.toLocaleDateString('en-IN', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  const todayOrders = orderDB.filter(o => o.date === 'Today');
+  const totalRevenue = todayOrders.reduce((s, o) => s + o.total, 0);
+  const avgVal = todayOrders.length > 0 ? Math.round(totalRevenue / todayOrders.length) : 0;
+  const activeTables = new Set(
+    todayOrders.filter(o => o.status === 'pending' || o.status === 'preparing').map(o => o.table)
+  ).size;
+
+  document.getElementById('kpi-orders').textContent  = todayOrders.length;
+  document.getElementById('kpi-revenue').textContent = totalRevenue.toLocaleString('en-IN');
+  document.getElementById('kpi-avg').textContent     = avgVal;
+  document.getElementById('kpi-tables').textContent  = activeTables;
+
+  // Revenue trend label
+  const revTrend = document.getElementById('kpi-rev-trend');
+  if (todayOrders.length === 0) {
+    revTrend.textContent = 'No orders yet';
+    revTrend.style.color = 'var(--muted)';
+  } else {
+    revTrend.textContent = todayOrders.length + ' order' + (todayOrders.length > 1 ? 's' : '') + ' placed today';
+    revTrend.style.color = 'var(--green, #81c784)';
+  }
+
+  // Live orders
+  const liveList   = document.getElementById('liveOrdersList');
+  const liveOrders = orderDB.filter(o => o.date === 'Today' && o.status !== 'completed' && o.status !== 'cancelled');
+  if (liveOrders.length === 0) {
+    liveList.innerHTML = '<div style="font-size:0.7rem;color:var(--muted);padding:0.75rem 0;text-align:center;">No active orders right now.</div>';
+  } else {
+    liveList.innerHTML = liveOrders.map(o => {
+      const itemStr = o.items.map(i => i.name + ' ×' + i.qty).join(', ');
+      return '<div class="live-order-card"><div class="live-status ' + o.status + '"></div><div class="live-order-info"><div class="live-order-table">Table ' + o.table + ' · ' + o.id + '</div><div class="live-order-items">' + itemStr + '</div><div class="status-dot-label ' + o.status + '">' + o.status + '</div></div><div><div class="live-order-amt">₹' + o.total + '</div><div class="live-order-time">' + o.time + '</div></div></div>';
+    }).join('');
+  }
+
+  // Popular items
+  const counts = {};
+  todayOrders.forEach(o => o.items.forEach(i => { counts[i.name] = (counts[i.name]||0) + i.qty; }));
+  const sorted   = Object.entries(counts).sort((a,b) => b[1]-a[1]).slice(0, 5);
+  const maxCount = sorted[0]?.[1] || 1;
+  if (sorted.length === 0) {
+    document.getElementById('popularList').innerHTML = '<div style="font-size:0.7rem;color:var(--muted);padding:0.5rem 0;text-align:center;">No data yet.</div>';
+  } else {
+    document.getElementById('popularList').innerHTML = sorted.map(([name,cnt]) =>
+      '<div class="popular-item"><div class="pop-row"><span class="pop-name">' + name + '</span><span class="pop-count">' + cnt + ' order' + (cnt>1?'s':'') + '</span></div><div class="pop-bar-bg"><div class="pop-bar" style="width:' + (cnt/maxCount*100) + '%"></div></div></div>'
+    ).join('');
+  }
+
+  // Peak hours chart — built from real orders placed today by hour
+  const hourBuckets = new Array(8).fill(0); // 8am, 10am, 12pm, 2pm, 4pm, 6pm, 8pm, 10pm
+  todayOrders.forEach(o => {
+    const t = o.time; // e.g. "10:05 AM"
+    if (!t || t.toLowerCase().includes('yesterday')) return;
+    const match = t.match(/(\d+):(\d+)\s*(AM|PM)/i);
+    if (!match) return;
+    let h = parseInt(match[1]);
+    const ampm = match[3].toUpperCase();
+    if (ampm === 'PM' && h !== 12) h += 12;
+    if (ampm === 'AM' && h === 12) h = 0;
+    // Map hour to bucket: 8,10,12,14,16,18,20,22
+    const slots = [8,10,12,14,16,18,20,22];
+    const idx = slots.findIndex(s => h < s + 2);
+    if (idx >= 0 && idx < 8) hourBuckets[idx]++;
+  });
+  const maxPeak = Math.max(...hourBuckets, 1);
+  document.getElementById('peakChart').innerHTML = hourBuckets.map(v => {
+    const h   = Math.max(Math.round(v/maxPeak*60), v > 0 ? 6 : 2);
+    const cls = v > 0 ? (v === Math.max(...hourBuckets) ? 'high' : 'mid') : 'low';
+    return '<div class="peak-bar-wrap"><div class="peak-bar ' + cls + '" style="height:' + h + 'px;"></div></div>';
+  }).join('');
+}
+
+/* ════════════════════════════════════════════════════════
+   📜  ORDER HISTORY
+════════════════════════════════════════════════════════ */
+function renderHistory(filter) {
+  let orders = [...orderDB];
+  if (filter === 'completed') orders = orders.filter(o => o.status === 'completed');
+  if (filter === 'pending')   orders = orders.filter(o => o.status === 'pending' || o.status === 'preparing');
+  if (filter === 'cancelled') orders = orders.filter(o => o.status === 'cancelled');
+  if (filter === 'today')     orders = orders.filter(o => o.date === 'Today');
+
+  document.getElementById('historyList').innerHTML = orders.length
+    ? orders.map(o => {
+        const itemStr = o.items.map(i => i.name + ' ×' + i.qty).join(' · ');
+        return '<div class="hist-card"><div class="hist-card-top"><span class="hist-order-id">' + o.id + '</span><span class="hist-date">' + o.date + ' · ' + o.time + '</span></div><div class="hist-table">Table ' + o.table + '</div><div class="hist-items-list">' + itemStr + '</div><div class="hist-card-bottom"><span class="hist-total">₹' + o.total + '</span><span class="hist-status ' + o.status + '">' + o.status + '</span></div></div>';
+      }).join('')
+    : '<div style="font-size:0.72rem;color:var(--muted);padding:1rem 0;text-align:center;">No orders found.</div>';
+}
+
+function filterHistory(filter, el) {
+  document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+  renderHistory(filter);
+}
+
+/* ════════════════════════════════════════════════════════
+   🛠️  ADMIN — MENU EDITOR
+════════════════════════════════════════════════════════ */
+function renderAdminMenu() {
+  const list = document.getElementById('adminMenuList');
+  list.innerHTML = '';
+  Object.keys(menuData).forEach(cat => {
+    list.innerHTML += '<div style="font-size:0.58rem;letter-spacing:0.15em;text-transform:uppercase;color:var(--gold);margin-top:1rem;margin-bottom:0.3rem;">' + cat + '</div>';
+    menuData[cat].forEach((item, i) => {
+      list.innerHTML += '<div class="menu-edit-item"><div class="avail-toggle ' + (item.available?'on':'off') + '" onclick="toggleAvail(\'' + cat + '\',' + i + ',this)"></div><span class="menu-edit-name">' + item.name + '</span><span class="menu-edit-price">' + (item.price?'₹'+item.price:'—') + '</span><button class="edit-btn-sm" onclick="openEdit(\'' + cat + '\',' + i + ')">✎</button><button class="del-btn-sm" onclick="deleteItem(\'' + cat + '\',' + i + ')">✕</button></div>';
+    });
+  });
+
+  // Admin live orders panel
+  const ao         = document.getElementById('adminOrdersList');
+  const liveOrders = orderDB.filter(o => o.date === 'Today');
+  ao.innerHTML = liveOrders.map(o =>
+    '<div class="admin-order-card"><div class="admin-order-top"><span class="admin-order-table">' + o.id + ' · Table ' + o.table + '</span><span class="admin-order-time">' + o.time + '</span></div><div class="admin-order-items">' + o.items.map(i => i.name + ' ×' + i.qty).join(' · ') + '</div><div class="admin-order-bottom"><span class="admin-order-total">₹' + o.total + '</span><select class="status-select" onchange="updateOrderStatus(\'' + o.id + '\',this.value)"><option ' + (o.status==='pending'?'selected':'')    + ' value="pending">Pending</option><option ' + (o.status==='preparing'?'selected':'')  + ' value="preparing">Preparing</option><option ' + (o.status==='completed'?'selected':'')  + ' value="completed">Completed</option><option ' + (o.status==='cancelled'?'selected':'')  + ' value="cancelled">Cancelled</option></select></div></div>'
+  ).join('');
+}
+
+function toggleAvail(cat, idx, el) {
+  menuData[cat][idx].available = !menuData[cat][idx].available;
+  el.classList.toggle('on'); el.classList.toggle('off');
+  renderAll();
+  showToast(menuData[cat][idx].name + (menuData[cat][idx].available ? ' enabled' : ' hidden'));
+}
+
+function deleteItem(cat, idx) {
+  const name = menuData[cat][idx].name;
+  menuData[cat].splice(idx, 1);
+  renderAdminMenu(); renderAll();
+  showToast(name + ' removed', 'error');
+}
+
+function openEdit(cat, idx) {
+  const item = menuData[cat][idx];
+  document.getElementById('editCat').value   = cat;
+  document.getElementById('editIdx').value   = idx;
+  document.getElementById('editName').value  = item.name;
+  document.getElementById('editDesc').value  = item.desc;
+  document.getElementById('editPrice').value = item.price || '';
+  document.getElementById('editModal').classList.add('open');
+}
+
+function closeEditModal() { document.getElementById('editModal').classList.remove('open'); }
+
+function saveEdit() {
+  const cat = document.getElementById('editCat').value;
+  const idx = parseInt(document.getElementById('editIdx').value);
+  menuData[cat][idx].name  = document.getElementById('editName').value;
+  menuData[cat][idx].desc  = document.getElementById('editDesc').value;
+  menuData[cat][idx].price = parseInt(document.getElementById('editPrice').value) || null;
+  closeEditModal(); renderAdminMenu(); renderAll();
+  showToast('✓ Item updated', 'success');
+}
+
+function addNewItem() {
+  const name  = document.getElementById('newItemName').value.trim();
+  const desc  = document.getElementById('newItemDesc').value.trim();
+  const price = parseInt(document.getElementById('newItemPrice').value) || null;
+  const cat   = document.getElementById('newItemCat').value;
+  if (!name) { showToast('Please enter an item name', 'error'); return; }
+  menuData[cat].push({ name, desc, price, popular:false, available:true });
+  document.getElementById('newItemName').value  = '';
+  document.getElementById('newItemDesc').value  = '';
+  document.getElementById('newItemPrice').value = '';
+  renderAdminMenu(); renderAll();
+  showToast('✓ ' + name + ' added to menu', 'success');
+}
+
+function updateOrderStatus(id, status) {
+  const order = orderDB.find(o => o.id === id);
+  if (order) {
+    order.status = status;
+    showToast(id + ' → ' + status);
+    // Update history badge
+    const pendingCount = orderDB.filter(o => o.date === 'Today' && (o.status === 'pending' || o.status === 'preparing')).length;
+    const badge = document.getElementById('history-badge');
+    badge.textContent = pendingCount;
+    badge.classList.toggle('show', pendingCount > 0);
+    // Refresh dashboard if visible
+    if (currentScreen === 'dashboard') renderDashboard();
+  }
+}
+
+function switchAdminTab(tab, el) {
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.admin-panel').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('admin-' + tab).classList.add('active');
+  if (tab === 'orders') renderAdminMenu();
+}
+
+/* ════════════════════════════════════════════════════════
+   🔄  LIVE DASHBOARD AUTO-REFRESH (every 15 seconds)
+════════════════════════════════════════════════════════ */
+setInterval(() => {
+  if (currentScreen === 'dashboard') renderDashboard();
+}, 15000);
+
+/* ════════════════════════════════════════════════════════
+   🏷️  CATEGORY TAB SCROLL SYNC
+════════════════════════════════════════════════════════ */
+document.querySelectorAll('.cat-tab').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.cat-tab').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const target = document.getElementById(btn.dataset.target);
+    if (target) target.scrollIntoView({ behavior:'smooth', block:'start' });
+  });
+});
+
+const menuSections = document.querySelectorAll('.section');
+const sectionObserver = new IntersectionObserver(entries => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      document.querySelectorAll('.cat-tab').forEach(b => b.classList.toggle('active', b.dataset.target === id));
+    }
+  });
+}, { threshold: 0.3 });
+menuSections.forEach(s => sectionObserver.observe(s));
+
+/* ════════════════════════════════════════════════════════
+   🚀  BOOT
+════════════════════════════════════════════════════════ */
+initApp();
+</script>
+</body>
+</html>
